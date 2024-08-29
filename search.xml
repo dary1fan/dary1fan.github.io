@@ -4,11 +4,11 @@
   
     
     <entry>
-      <title>甘特图</title>
+      <title>Marmaid总结方法</title>
       <link href="/2024/08/28/#%E8%BF%99%E6%98%AF%E6%B5%8B%E8%AF%95%E7%9A%84%E4%B8%80%E7%BA%A7%E6%A0%87%E9%A2%98/"/>
       <url>/2024/08/28/#%E8%BF%99%E6%98%AF%E6%B5%8B%E8%AF%95%E7%9A%84%E4%B8%80%E7%BA%A7%E6%A0%87%E9%A2%98/</url>
       
-        <content type="html"><![CDATA[<h2 id="这是测试的一级标题"><a href="#这是测试的一级标题" class="headerlink" title="这是测试的一级标题"></a>这是测试的一级标题</h2><p>gantt<br>    title 项目开发流程<br>    section 项目确定<br>        需求分析    ：a1, 2016-06-22, 3d<br>        可行性报告   ：after a1, 5d<br>        概念验证    ：5d<br>section 项目实施<br>        概要设计    ：2016-07-05, 5d<br>        详细设计    ：2016-07-08, 10d<br>        编码        ：2016-07-15, 10d<br>        测试        ：2016-07-22. 5d<br>section 发布验收<br>        发布：2d<br>        验收：3d</p>]]></content>
+        <content type="html"><![CDATA[<p>这篇文章总结了Mermaid的使用方法</p><h2 id="Mermaid-官网地址-https-mermaid-nodejs-cn-intro-getting-started-html"><a href="#Mermaid-官网地址-https-mermaid-nodejs-cn-intro-getting-started-html" class="headerlink" title="Mermaid 官网地址 https://mermaid.nodejs.cn/intro/getting-started.html"></a>Mermaid 官网地址 <a href="https://mermaid.nodejs.cn/intro/getting-started.html">https://mermaid.nodejs.cn/intro/getting-started.html</a></h2><pre class="mermaid">gantt    title 项目开发流程    section 项目确定        需求分析        :sa1,2016-06-22,3d        可行性报告      :after a1,5d        概念验证        :5d    section 项目实施        概要设计        :2016-07-05, 5d        详细设计        :2016-07-08, 10d        编码            :2016-07-15, 10d        测试            :2016-07-22. 5d    section 发布验收        发布    :2d        验收    :3d</pre>]]></content>
       
       
       
