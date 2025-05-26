@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能美食泡泡</title>
+    <title>智能泡泡决策系统</title>
     <style>
         body {
             margin: 0;
@@ -18,28 +18,27 @@
             top: 20px;
             left: 20px;
             z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(255,255,255,0.8);
+            padding: 15px;
+            border-radius: 15px;
         }
 
         .bubble {
             position: absolute;
-            width: 80px;
-            height: 80px;
-            background: rgba(255, 255, 255, 0.9);
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-            transition: all 0.3s;
-            animation: float 15s infinite linear;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0); }
-            25% { transform: translate(5px, 8px); }
-            50% { transform: translate(-8px, 10px); }
-            75% { transform: translate(6px, -4px); }
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            transition: all 0.15s;
+            font-weight: bold;
         }
 
         .selected {
@@ -60,19 +59,30 @@
             100% { opacity: 0; transform: scale(0); }
         }
 
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
         #actionBtn {
             position: fixed;
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 12px 30px;
-            font-size: 18px;
             background: #FF6B6B;
-            color: white;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            box-shadow: 0 3px 10px rgba(255, 107, 107, 0.3);
+            padding: 15px 40px;
+            font-size: 18px;
         }
 
         .tip {
@@ -83,72 +93,224 @@
             color: #666;
             font-size: 12px;
         }
+
+        .collision {
+            transform: scale(0.85) rotate(8deg);
+        }
     </style>
 </head>
 <body>
     <div id="controls">
         <button onclick="createBubble()">新增泡泡</button>
+        <button onclick="clearBubbles()" style="background:#f44336">清空泡泡</button>
     </div>
     <div id="bubbleContainer"></div>
     <button id="actionBtn" onclick="selectBubble()">一会吃什么</button>
     <div class="tip">单击泡泡可修改，双击泡泡可删除</div>
 
+    <audio id="createSound" src="https://assets.mixkit.co/active_storage/sfx/1064/1064-preview.mp3"></audio>
+    <audio id="popSound" src="https://assets.mixkit.co/active_storage/sfx/2593/2593-preview.mp3"></audio>
+    <audio id="collideSound" src="https://assets.mixkit.co/active_storage/sfx/2351/2351-preview.mp3"></audio>
+
     <script>
         let bubbleCount = 0;
         let clickTimer = null;
+        const bubbles = new Map();
+        const physics = {
+            maxSpeed: 2.5,
+            bounce: 0.85,
+            friction: 0.99,
+            collisionDist: 70,
+            borderOffset: 20
+        };
+
+        class Bubble {
+            constructor(element) {
+                this.element = element;
+                this.x = Math.random() * (window.innerWidth - 100) + 50;
+                this.y = Math.random() * (window.innerHeight - 150) + 50;
+                this.vx = (Math.random() * 2 - 1) * 1.5;
+                this.vy = (Math.random() * 2 - 1) * 1.5;
+                this.updatePosition();
+            }
+
+            updatePosition() {
+                this.element.style.left = `${this.x}px`;
+                this.element.style.top = `${this.y}px`;
+            }
+
+            move() {
+                // 边界碰撞检测
+                this.handleBoundary();
+                
+                // 更新位置
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // 应用速度衰减
+                this.vx *= physics.friction;
+                this.vy *= physics.friction;
+                
+                this.updatePosition();
+            }
+
+            handleBoundary() {
+                const rect = this.element.getBoundingClientRect();
+                
+                // 左边界
+                if (rect.left < physics.borderOffset) {
+                    this.vx = Math.abs(this.vx) * physics.bounce;
+                    this.playCollisionEffect();
+                }
+                // 右边界
+                if (rect.right > window.innerWidth - physics.borderOffset) {
+                    this.vx = -Math.abs(this.vx) * physics.bounce;
+                    this.playCollisionEffect();
+                }
+                // 上边界
+                if (rect.top < physics.borderOffset) {
+                    this.vy = Math.abs(this.vy) * physics.bounce;
+                    this.playCollisionEffect();
+                }
+                // 下边界
+                if (rect.bottom > window.innerHeight - physics.borderOffset) {
+                    this.vy = -Math.abs(this.vy) * physics.bounce;
+                    this.playCollisionEffect();
+                }
+            }
+
+            playCollisionEffect() {
+                this.element.classList.add('collision');
+                playSound('collide');
+                setTimeout(() => {
+                    this.element.classList.remove('collision');
+                }, 200);
+            }
+        }
 
         function createBubble() {
+            playSound('create');
             bubbleCount++;
-            const container = document.getElementById('bubbleContainer');
-            const bubble = document.createElement('div');
             
+            const bubble = document.createElement('div');
             bubble.className = 'bubble';
             bubble.textContent = bubbleCount;
-            bubble.style.left = `${Math.random() * 85}%`;
-            bubble.style.top = `${Math.random() * 75}%`;
-            bubble.style.animationDuration = `${10 + Math.random() * 8}s`;
+            
+            // 事件监听
+            bubble.addEventListener('click', handleClick);
+            bubble.addEventListener('dblclick', handleDoubleClick);
+            
+            document.getElementById('bubbleContainer').appendChild(bubble);
+            bubbles.set(bubble, new Bubble(bubble));
+        }
 
-            // 单击修改
-            bubble.addEventListener('click', function(e) {
-                clearTimeout(clickTimer);
-                clickTimer = setTimeout(() => {
-                    const newText = prompt('修改内容：', this.textContent);
-                    if(newText) this.textContent = newText;
-                }, 200);
-            });
+        function handleClick(e) {
+            clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => {
+                const newText = prompt('修改内容：', e.target.textContent);
+                if(newText) e.target.textContent = newText;
+            }, 200);
+        }
 
-            // 双击删除
-            bubble.addEventListener('dblclick', function(e) {
-                clearTimeout(clickTimer);
-                this.remove();
-            });
+        function handleDoubleClick(e) {
+            clearTimeout(clickTimer);
+            playSound('pop');
+            e.target.remove();
+            bubbles.delete(e.target);
+        }
 
-            container.appendChild(bubble);
+        function clearBubbles() {
+            playSound('pop');
+            bubbles.clear();
+            document.getElementById('bubbleContainer').innerHTML = '';
         }
 
         function selectBubble() {
-            const bubbles = [...document.querySelectorAll('.bubble')];
-            if(bubbles.length === 0) return;
-
-            const selected = bubbles[Math.floor(Math.random() * bubbles.length)];
-            selected.classList.add('selected');
-
+            if(bubbles.size === 0) return;
+            
+            const bubbleArray = Array.from(bubbles.values());
+            const selected = bubbleArray[Math.floor(Math.random() * bubbleArray.length)];
+            
+            // 标记选中泡泡
+            selected.element.classList.add('selected');
+            
             // 移除其他泡泡
-            bubbles.forEach(bubble => {
+            bubbleArray.forEach(bubble => {
                 if(bubble !== selected) {
-                    bubble.style.animation = 'none';
-                    bubble.classList.add('fade-out');
-                    setTimeout(() => bubble.remove(), 1000);
+                    bubble.element.classList.add('fade-out');
+                    setTimeout(() => {
+                        bubble.element.remove();
+                        bubbles.delete(bubble.element);
+                    }, 1000);
                 }
             });
 
-            // 居中选中泡泡
-            setTimeout(() => {
-                selected.style.left = '50%';
-                selected.style.top = '50%';
-                selected.style.transform = 'translate(-50%, -50%)';
-            }, 1000);
+            // 停止物理运动
+            bubbles.clear();
+            bubbles.set(selected.element, selected);
         }
+
+        function playSound(type) {
+            const audioMap = {
+                create: document.getElementById('createSound'),
+                pop: document.getElementById('popSound'),
+                collide: document.getElementById('collideSound')
+            };
+            const audio = audioMap[type];
+            audio.currentTime = 0;
+            audio.play();
+        }
+
+        // 物理引擎主循环
+        function physicsLoop() {
+            const bubbleArray = Array.from(bubbles.values());
+            
+            // 碰撞检测
+            bubbleArray.forEach((b1, i) => {
+                for(let j = i+1; j < bubbleArray.length; j++) {
+                    const b2 = bubbleArray[j];
+                    const dx = b2.x - b1.x;
+                    const dy = b2.y - b1.y;
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+
+                    if(distance < physics.collisionDist) {
+                        // 碰撞反应
+                        const angle = Math.atan2(dy, dx);
+                        const speed1 = Math.sqrt(b1.vx*b1.vx + b1.vy*b1.vy);
+                        const speed2 = Math.sqrt(b2.vx*b2.vx + b2.vy*b2.vy);
+                        const direction1 = Math.atan2(b1.vy, b1.vx);
+                        const direction2 = Math.atan2(b2.vy, b2.vx);
+                        
+                        // 速度交换
+                        [b1.vx, b2.vx] = [
+                            speed2 * Math.cos(direction2 - angle) * physics.bounce,
+                            speed1 * Math.cos(direction1 - angle) * physics.bounce
+                        ];
+                        
+                        [b1.vy, b2.vy] = [
+                            speed2 * Math.sin(direction2 - angle) * physics.bounce,
+                            speed1 * Math.sin(direction1 - angle) * physics.bounce
+                        ];
+
+                        // 变形效果
+                        b1.element.classList.add('collision');
+                        b2.element.classList.add('collision');
+                        playSound('collide');
+                        setTimeout(() => {
+                            b1.element.classList.remove('collision');
+                            b2.element.classList.remove('collision');
+                        }, 200);
+                    }
+                }
+            });
+
+            // 移动所有泡泡
+            bubbleArray.forEach(bubble => bubble.move());
+            requestAnimationFrame(physicsLoop);
+        }
+
+        // 启动物理引擎
+        physicsLoop();
     </script>
 </body>
 </html>
