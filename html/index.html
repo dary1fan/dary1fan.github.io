@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能美食泡泡</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background: linear-gradient(180deg, #87CEEB, #B0E0E6);
+            overflow: hidden;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+
+        #controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .bubble {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            transition: all 0.3s;
+            animation: float 15s infinite linear;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(5px, 8px); }
+            50% { transform: translate(-8px, 10px); }
+            75% { transform: translate(6px, -4px); }
+        }
+
+        .selected {
+            animation: glow 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+            to { box-shadow: 0 0 25px rgba(255, 215, 0, 0.9); }
+        }
+
+        .fade-out {
+            animation: fadeBurst 1s forwards;
+        }
+
+        @keyframes fadeBurst {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0); }
+        }
+
+        #actionBtn {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 30px;
+            font-size: 18px;
+            background: #FF6B6B;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(255, 107, 107, 0.3);
+        }
+
+        .tip {
+            position: fixed;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <button onclick="createBubble()">新增泡泡</button>
+    </div>
+    <div id="bubbleContainer"></div>
+    <button id="actionBtn" onclick="selectBubble()">一会吃什么</button>
+    <div class="tip">单击泡泡可修改，双击泡泡可删除</div>
+
+    <script>
+        let bubbleCount = 0;
+        let clickTimer = null;
+
+        function createBubble() {
+            bubbleCount++;
+            const container = document.getElementById('bubbleContainer');
+            const bubble = document.createElement('div');
+            
+            bubble.className = 'bubble';
+            bubble.textContent = bubbleCount;
+            bubble.style.left = `${Math.random() * 85}%`;
+            bubble.style.top = `${Math.random() * 75}%`;
+            bubble.style.animationDuration = `${10 + Math.random() * 8}s`;
+
+            // 单击修改
+            bubble.addEventListener('click', function(e) {
+                clearTimeout(clickTimer);
+                clickTimer = setTimeout(() => {
+                    const newText = prompt('修改内容：', this.textContent);
+                    if(newText) this.textContent = newText;
+                }, 200);
+            });
+
+            // 双击删除
+            bubble.addEventListener('dblclick', function(e) {
+                clearTimeout(clickTimer);
+                this.remove();
+            });
+
+            container.appendChild(bubble);
+        }
+
+        function selectBubble() {
+            const bubbles = [...document.querySelectorAll('.bubble')];
+            if(bubbles.length === 0) return;
+
+            const selected = bubbles[Math.floor(Math.random() * bubbles.length)];
+            selected.classList.add('selected');
+
+            // 移除其他泡泡
+            bubbles.forEach(bubble => {
+                if(bubble !== selected) {
+                    bubble.style.animation = 'none';
+                    bubble.classList.add('fade-out');
+                    setTimeout(() => bubble.remove(), 1000);
+                }
+            });
+
+            // 居中选中泡泡
+            setTimeout(() => {
+                selected.style.left = '50%';
+                selected.style.top = '50%';
+                selected.style.transform = 'translate(-50%, -50%)';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
